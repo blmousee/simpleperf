@@ -83,6 +83,7 @@ def install_new_release(branch, build, install_dir):
     for arch in ('arm', 'arm64', 'x86', 'x86_64'):
         install_device_components(branch, build, arch, install_dir)
 
+    install_simpleperf_report(branch, build)
     install_repo_prop(branch, build)
 
 
@@ -116,6 +117,13 @@ def install_repo_prop(branch, build):
     # We took everything from the same build number, so we only need the
     # repo.prop from one of our targets.
     fetch_artifact(branch, build, 'sdk', 'repo.prop')
+
+
+def install_simpleperf_report(branch, build):
+    """Installs simplepef_report.prop."""
+    # We took everything from the same build number, so we only need the
+    # repo.prop from one of our targets.
+    fetch_artifact(branch, build, 'sdk_arm64-sdk', 'simpleperf_report.py')
 
 
 def get_args():
@@ -153,7 +161,8 @@ def main():
         start_branch(args.build)
     remove_old_release(install_dir)
     install_new_release(args.branch, args.build, install_dir)
-    commit(args.branch, args.build, [install_dir, 'repo.prop'])
+    artifacts = [install_dir, 'simpleperf_report.py', 'repo.prop']
+    commit(args.branch, args.build, artifacts)
 
 
 if __name__ == '__main__':
