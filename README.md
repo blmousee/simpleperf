@@ -368,8 +368,9 @@ So we should download simpleperf in arm64 directory to device.
 
     $adb push device/arm64/simpleperf /data/local/tmp
     $adb shell run-as com.example.sudogame cp /data/local/tmp/simpleperf .
-    $adb shell run-as com.example.sudogame ls
-    cache simpleperf
+    $adb shell run-as com.example.sudogame chmod a+x simpleperf
+    $adb shell run-as com.example.sudogame ls -l
+    -rwxrwxrwx 1 u0_a90 u0_a90 3059208 2016-01-01 10:40 simpleperf
 
 Note that some apps use arm native libraries even on arm64 devices (We can
 verify this by checking /proc/<process\_id\_of\_app>/maps). In that case, we
