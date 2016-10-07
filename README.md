@@ -74,9 +74,10 @@ kernel.
       ...
 
 ### simpleperf stat
-simpleperf stat is used to get an event counter summary of the profiled program.
-By passing options, we can select which events to use, which processes/threads
-to monitor, and how long to monitor. Below is an example.
+simpleperf stat is used to get a raw event counter information of the profiled program
+or system-wide. By passing options, we can select which events to use, which
+processes/threads to monitor, how long to monitor and the print interval.
+Below is an example.
 
     # Stat using default events (cpu-cycles,instructions,...), and monitor
     # process 7394 for 10 seconds.
@@ -170,6 +171,29 @@ at any time. Below are examples.
     # Stop monitoring using Ctrl-C.
     $simpleperf stat -p 11904 --duration 10
     ^C
+
+#### Decide the print interval
+When monitoring perf counters, we can also use --interval option to decide the print
+interval. Below are examples.
+
+    # Print stat for process 11904 every 300ms.
+    $simpleperf stat -p 11904 --duration 10 --interval 300
+    # Stop by using Ctrl-C.
+    ^C
+
+    # Print system wide stat at interval of 300ms for 10 seconds (rooted device only).
+    # system wide profiling needs root privilege
+    $su 0 simpleperf stat -a --duration 10 --interval 300
+
+#### Display counter in systrce
+simpleperf can also work with systrace to dump counters in the collected trace.
+Below is an example to do a system wide stat
+
+    # capture instructions (kernel only) and cache miss with interval of 300 milliseconds for 15 seconds
+    $su 0 simpleperf stat -e instructions:k,cache-misses -a --interval 300 --duration 15
+    # on host launch systrace to collect trace for 10 seconds
+    (HOST)$external/chromium-trace/systrace.py --time=10 -o new.html sched gfx view
+    #open the collected new.html and perf counters will be shown up
 
 ### simpleperf record
 simpleperf record is used to dump records of the profiled program. By passing
