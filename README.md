@@ -10,7 +10,7 @@ Bugs and feature requests can be submitted at
 http://github.com/android-ndk/ndk/issues.
 
 ## How simpleperf works
-Modern cpus have a hardware component called the performance monitoring unit
+Modern CPUs have a hardware component called the performance monitoring unit
 (PMU). The PMU has several hardware counters, counting events like how many cpu
 cycles have happened, how many instructions have executed, or how many cache
 misses have happened.
@@ -144,7 +144,7 @@ time. If we want to have some events monitored at the same time, we can use
 #### Select target to monitor
 We can select which processes or threads to monitor via -p option or -t option.
 Monitoring a process is the same as monitoring all threads in the process.
-Simpleperf can also fork a child processing running a new command and monitor
+Simpleperf can also fork a child process to run the new command and then monitor
 the child process. Below are examples.
 
     # Stat process 11904 and 11905.
@@ -157,9 +157,9 @@ the child process. Below are examples.
     $simpleperf stat ls
 
 #### Decide how long to monitor
-When monitoring exist threads, we can use --duration option to decide how long
+When monitoring existing threads, we can use --duration option to decide how long
 to monitor. When monitoring a child process running a new command, simpleperf
-monitors until the child process ends. And we can use Ctrl-C to stop monitoring
+monitors until the child process ends. In this case, we can use Ctrl-C to stop monitoring
 at any time. Below are examples.
 
     # Stat process 11904 for 10 seconds.
@@ -185,20 +185,20 @@ interval. Below are examples.
     # system wide profiling needs root privilege
     $su 0 simpleperf stat -a --duration 10 --interval 300
 
-#### Display counter in systrce
+#### Display counters in systrace
 simpleperf can also work with systrace to dump counters in the collected trace.
 Below is an example to do a system wide stat
 
-    # capture instructions (kernel only) and cache miss with interval of 300 milliseconds for 15 seconds
+    # capture instructions (kernel only) and cache misses with interval of 300 milliseconds for 15 seconds
     $su 0 simpleperf stat -e instructions:k,cache-misses -a --interval 300 --duration 15
     # on host launch systrace to collect trace for 10 seconds
     (HOST)$external/chromium-trace/systrace.py --time=10 -o new.html sched gfx view
-    #open the collected new.html and perf counters will be shown up
+    # open the collected new.html in browser and perf counters will be shown up
 
 ### simpleperf record
 simpleperf record is used to dump records of the profiled program. By passing
 options, we can select which events to use, which processes/threads to monitor,
-the frequency to dump records, how long to monitor, and where to store records.
+what frequency to dump records, how long to monitor, and where to store records.
 
     # Record on process 7394 for 10 seconds, using default event (cpu-cycles),
     # using default sample frequency (4000 samples per second), writing records
@@ -229,7 +229,7 @@ Below are examples.
 
 #### Set the frequency to record
 We can set the frequency to dump records via the -f or -c options. For example,
--f 4000 means dumping approximately 4000 records every second the monitored
+-f 4000 means dumping approximately 4000 records every second when the monitored
 thread runs. If a monitored thread runs 0.2s in one second (it can be preempted
 or blocked in other times), simpleperf dumps about 4000 * 0.2 / 1.0 = 800
 records every second. Another way is using -c option. For example, -c 10000
@@ -271,9 +271,9 @@ perf.data and executable binaries used by the monitored program, filter out
 uninteresting records, and decide how to group records.
 
 Below is an example. Records are grouped into 4 sample entries, each entry is
-a row. There are several columns, each column showing piece of information
-belong to a sample entry. The first column is Overhead, which shows the
-percentage of events inside current sample entry in total event count. As the
+a row. There are several columns, each column shows piece of information
+belonging to a sample entry. The first column is Overhead, which shows the
+percentage of events inside current sample entry in total events. As the
 perf event is cpu-cycles, the overhead can be seen as the percentage of cpu
 time used in each function.
 
@@ -359,15 +359,15 @@ Simpleperf works similar to linux-tools-perf, but it has following improvements:
 1. Aware of Android environment. Simpleperf handles some Android specific
 situations when profiling. For example, it can profile embedded shared libraries
 in apk, read symbol table and debug information from .gnu_debugdata section. If
-possible, it gives suggestions when meeting errors, like how to disable
+possible, it gives suggestions when facing errors, like how to disable
 perf_harden to enable profiling.
 2. Support unwinding while recording. If we want to use -g option to record and
-report call-graph of a program, We need to dump user stack and register set in
+report call-graph of a program, we need to dump user stack and register set in
 each record, and then unwind the stack to find the call chain. Simpleperf
 supports unwinding while recording, so it doesn’t need to store user stack in
 perf.data. So we can profile for a longer time with limited space on device.
-3. Build static binaries. Simpleperf is a static binary. So it doesn’t need
-supported shared libraries to run. It means there is no limitation of Android
+3. Build in static binaries. Simpleperf is a static binary, so it doesn’t need
+supporting shared libraries to run. It means there is no limitation of Android
 version that simpleperf can run on, although some devices don’t support
 profiling.
 
@@ -382,13 +382,13 @@ libraries.
 We need to run debug version of the app, because we can’t use *run-as* for non
 debuggable apps.
 
-## 2. Download simpleperf to the app's directory
+## 2. Download simpleperf to the app’s directory
 Use *uname* to find the architecture on device
 
     $adb shell uname -m
     aarch64
 
-So we should download simpleperf in arm64 directory to device.
+"aarch64" means we should download arm64 version of simpleperf to device.
 
     $adb push device/arm64/simpleperf /data/local/tmp
     $adb shell run-as com.example.sudogame cp /data/local/tmp/simpleperf .
@@ -429,8 +429,8 @@ profiling.
     $adb shell run-as com.example.sudogame ls -lh perf.data
     -rw-rw-rw- 1 u0_a102 u0_a102 4.3M 2016-07-12 20:01 perf.data
 
-So we have recorded perf.data with 81445 records. There is a warning about
-failing to read kptr_restrict. It doesn’t matter, only a notification that we
+Now we have recorded perf.data with 81445 records. There is a warning about
+failing to read kptr_restrict. It doesn’t matter in our case, but is a notification that we
 can’t read kernel symbol addresses.
 
 ## 6. Report perf.data
@@ -481,7 +481,7 @@ In the report above, most samples belong to unknown symbol. It is because the
 libsudo-game-jni.so used on device doesn’t contain symbol table. We need to
 download shared library with symbol table to device. In android studio 2.1.2,
 the binary with symbol table is in
-[app_dir]/app/build/intermediates/binaries/debug/obj/arm64-v8a.
+[app_dir]/app/build/intermediates/binaries/debug/obj/arm64-v8a (for amr64).
 
     # Make a proper directory to download binary to device. This directory
     # should be the same as the directory of
@@ -504,8 +504,8 @@ the binary with symbol table is in
     0.20%     1       Java_com_example_sudogame_GameModel_findConflictPairs
     0.14%     1       Java_com_example_sudogame_GameModel_canFindSolution
 
-With the help of debug libsudo-game-jni.so, the report above shows that most
-time in libsudo-game-jni.so is spent in function checkValid. And we can look
+With the help of debug version of libsudo-game-jni.so, the report above shows that most
+time in libsudo-game-jni.so is spent in function checkValid. So now we can look
 into it further.
 
 ### Report samples in one function
@@ -625,10 +625,10 @@ others. We can use  *-g callee* option to show call graph in callee mode.
 
 #### Report using report.py
 The call graph generated by simpleperf report may be hard to read in text mode.
-Simpleperf provides a python script showing gui interface of call graph.
+Simpleperf provides a python script showing GUI of call graph.
 It can be used as below.
 
-    # Show call graph in gui interface.
+    # Show call graph in GUI.
     $adb shell run-as com.example.sudogame ./simpleperf report -n -g --symfs . >perf.report
     $python report.py perf.report
 
@@ -732,5 +732,5 @@ compiled from java code.
           |           |--99.93%-- canFindSolution(Board&)
     ...
 
-As in the report above, function reInit() and canFindSolution() are java
+As in the report above, reInit() and canFindSolution() are java
 functions.
