@@ -178,8 +178,6 @@ interval. Below are examples.
 
     # Print stat for process 11904 every 300ms.
     $simpleperf stat -p 11904 --duration 10 --interval 300
-    # Stop by using Ctrl-C.
-    ^C
 
     # Print system wide stat at interval of 300ms for 10 seconds (rooted device only).
     # system wide profiling needs root privilege
@@ -378,9 +376,10 @@ an app called com.example.sudogame, which uses a jni native library
 sudo-game-jni.so. We focus on sudo-game-jni.so, not the java code or system
 libraries.
 
-## 1. Run debug version of the app on device
-We need to run debug version of the app, because we can’t use *run-as* for non
-debuggable apps.
+## 1. Run a debuggable="true" version of the app on device
+We need to run a copy of the app with android:debuggable=”true” in its
+AndroidManfest.xml <application> element, because we can’t use run-as for
+non-debuggable apps.
 
 ## 2. Download simpleperf to the app’s directory
 Use *uname* to find the architecture on device
@@ -631,6 +630,40 @@ It can be used as below.
     # Show call graph in GUI.
     $adb shell run-as com.example.sudogame ./simpleperf report -n -g --symfs . >perf.report
     $python report.py perf.report
+
+## 8. Report perf.data on host
+We can also use adb to pull perf.data on host. Then use simpleperf on host to
+report it (Simpleperf on host is not provided, but can be built from source
+code). Because we don’t have any symbol information on host, we need to
+collect symbol information in perf.data while recording.
+
+    # Collect symbol information while recording.
+    device#./simpleperf record -t 25636 --dump-symbols --duration 30
+
+    # pull perf.data on host
+    host$adb shell run-as com.example.sudogame cat perf.data >perf.data
+
+    # report perf.data
+    host$simpleperf report
+
+### Show flamegraph
+Simpleperf supports reading perf.data through libsimpleperf_report.so.
+Currently, libsimpleperf_report.so is only provided on linux x86_64 platform,
+but it can be built for other platforms from source code. It has a python
+interface simpleperf_report_lib.py. So we can write python scripts to read
+perf.data. The shared library and scripts are in
+https://android.googlesource.com/platform/system/extras/+/master/simpleperf/scripts/.
+
+One example is report_sample.py. It can be used to output file used to show
+flame graph as below.
+
+    # Convert perf.data into out.perf.
+    host$python report_sample.py >out.perf
+
+    # show out.perf using flamegraph
+    host$stackcollapse-perf.pl out.perf >out.folded
+    host$./flamegraph.pl out.folded >a.svg
+
 
 # Steps to profile java code on rooted devices
 Simpleperf only supports profiling native instructions in binaries in ELF
