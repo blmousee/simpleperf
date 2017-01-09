@@ -26,6 +26,41 @@ import textwrap
 THIS_DIR = os.path.realpath(os.path.dirname(__file__))
 
 
+class InstallEntry(object):
+    def __init__(self, target, name, install_path, need_strip=False):
+        self.target = target
+        self.name = name
+        self.install_path = install_path
+        self.need_strip = need_strip
+
+
+bin_install_list = [
+    # simpleperf on device
+    InstallEntry('sdk_arm64-sdk', 'simpleperf', 'android/arm64/simpleperf'),
+    InstallEntry('sdk_arm64-sdk', 'simpleperf32', 'android/arm/simpleperf'),
+    InstallEntry('sdk_x86_64-sdk', 'simpleperf', 'android/x86_64/simpleperf'),
+    InstallEntry('sdk_x86_64-sdk', 'simpleperf32', 'android/x86/simpleperf'),
+
+    # simpleperf on host
+    InstallEntry('sdk_arm64-sdk', 'simpleperf_host', 'linux/x86_64/simpleperf', True),
+    InstallEntry('sdk_arm64-sdk', 'simpleperf_host32', 'linux/x86/simpleperf', True),
+    InstallEntry('sdk_mac', 'simpleperf_host', 'darwin/x86_64/simpleperf'),
+    InstallEntry('sdk_mac', 'simpleperf_host32', 'darwin/x86/simpleperf'),
+    InstallEntry('sdk', 'simpleperf.exe', 'windows/x86_64/simpleperf.exe', True),
+    InstallEntry('sdk', 'simpleperf32.exe', 'windows/x86/simpleperf.exe', True),
+
+    # libsimpleperf_report.so on host
+    InstallEntry('sdk_arm64-sdk', 'libsimpleperf_report.so', 'linux/x86_64/libsimpleperf_report.so', True),
+    InstallEntry('sdk_arm64-sdk', 'libsimpleperf_report32.so', 'linux/x86/libsimpleperf_report.so', True),
+    InstallEntry('sdk_mac', 'libsimpleperf_report.dylib', 'darwin/x86_64/libsimpleperf_report.dylib'),
+    InstallEntry('sdk_mac', 'libsimpleperf_report32.so', 'darwin/x86/libsimpleperf_report.dylib'),
+    InstallEntry('sdk', 'libsimpleperf_report.dll', 'windows/x86_64/libsimpleperf_report.dll', True),
+    InstallEntry('sdk', 'libsimpleperf_report32.dll', 'windows/x86/libsimpleperf_report.dll', True),
+]
+
+script_install_entry = InstallEntry('sdk_arm64-sdk', 'simpleperf_script.zip', 'simpleperf_script.zip')
+
+
 def logger():
     """Returns the main logger for this module."""
     return logging.getLogger(__name__)
@@ -66,50 +101,68 @@ def commit(branch, build, add_paths):
     check_call(['git', 'commit', '-m', message])
 
 
-def remove_old_release(install_dir):
+def list_prebuilts():
+    """List all prebuilts in current directory."""
+    result = []
+    if os.path.isdir('bin'):
+        result.append('bin')
+    for item in os.listdir('.'):
+        is_prebuilt = False
+        if os.path.isfile(item):
+            if item == 'README.md':
+                is_prebuilt = True
+            elif item.endswith('.py') and item != 'update.py':
+                is_prebuilt = True
+            elif item.endswith('.config'):
+                is_prebuilt = True
+        if is_prebuilt:
+            result.append(item)
+    return result
+
+
+def remove_old_release():
     """Removes the old prebuilts."""
-    if os.path.exists(install_dir):
-        logger().info('Removing old install directory "%s"', install_dir)
-        check_call(['git', 'rm', '-rf', '--ignore-unmatch', install_dir])
+    old_prebuilts = list_prebuilts()
+    if not old_prebuilts:
+        return
+    logger().info('Removing old prebuilts %s', old_prebuilts)
+    check_call(['git', 'rm', '-rf', '--ignore-unmatch'] + old_prebuilts)
 
     # Need to check again because git won't remove directories if they have
     # non-git files in them.
-    if os.path.exists(install_dir):
-        shutil.rmtree(install_dir)
+    for prebuilt in old_prebuilts:
+        if os.path.exists(prebuilt):
+            shutil.rmtree(prebuilt)
 
 
-def install_new_release(branch, build, install_dir):
+def install_new_release(branch, build):
     """Installs the new release."""
-    for arch in ('arm', 'arm64', 'x86', 'x86_64'):
-        install_device_components(branch, build, arch, install_dir)
-
-    install_simpleperf_report(branch, build)
+    for entry in bin_install_list:
+        install_entry(branch, build, 'bin', entry)
+    install_entry(branch, build, '.', script_install_entry)
     install_repo_prop(branch, build)
 
 
-def install_device_components(branch, build, arch, base_install_dir):
-    """Installs the device specific components of the release."""
-    install_dir = os.path.join(base_install_dir, arch)
-    os.makedirs(install_dir)
-
-    target = {
-        'arm': 'sdk_arm64-sdk',
-        'arm64': 'sdk_arm64-sdk',
-        'x86': 'sdk_x86_64-sdk',
-        'x86_64': 'sdk_x86_64-sdk',
-    }[arch]
-
-    name = {
-        'arm': 'simpleperf32',
-        'arm64': 'simpleperf',
-        'x86': 'simpleperf32',
-        'x86_64': 'simpleperf',
-    }[arch]
+def install_entry(branch, build, install_dir, entry):
+    """Installs one prebuilt file specified by entry."""
+    target = entry.target
+    name = entry.name
+    install_path = os.path.join(install_dir, entry.install_path)
+    need_strip = entry.need_strip
 
     fetch_artifact(branch, build, target, name)
     exe_stat = os.stat(name)
     os.chmod(name, exe_stat.st_mode | stat.S_IEXEC)
-    shutil.move(name, os.path.join(install_dir, 'simpleperf'))
+    if need_strip:
+        check_call(['strip', name])
+    dir = os.path.dirname(install_path)
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+    shutil.move(name, install_path)
+
+    if install_path.endswith('.zip'):
+        check_call(['unzip', install_path])
+        os.remove(install_path)
 
 
 def install_repo_prop(branch, build):
@@ -117,13 +170,6 @@ def install_repo_prop(branch, build):
     # We took everything from the same build number, so we only need the
     # repo.prop from one of our targets.
     fetch_artifact(branch, build, 'sdk', 'repo.prop')
-
-
-def install_simpleperf_report(branch, build):
-    """Installs simplepef_report.prop."""
-    # We took everything from the same build number, so we only need the
-    # repo.prop from one of our targets.
-    fetch_artifact(branch, build, 'sdk_arm64-sdk', 'simpleperf_report.py')
 
 
 def get_args():
@@ -155,13 +201,11 @@ def main():
         verbosity = 2
     logging.basicConfig(level=verbose_map[verbosity])
 
-    install_dir = 'android'
-
     if not args.use_current_branch:
         start_branch(args.build)
-    remove_old_release(install_dir)
-    install_new_release(args.branch, args.build, install_dir)
-    artifacts = [install_dir, 'simpleperf_report.py', 'repo.prop']
+    remove_old_release()
+    install_new_release(args.branch, args.build)
+    artifacts = ['repo.prop'] + list_prebuilts()
     commit(args.branch, args.build, artifacts)
 
 
